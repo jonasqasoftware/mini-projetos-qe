@@ -19,7 +19,7 @@ O histórico de commits conta a história em passos pequenos:
 1. o serviço entra sem proteção contra repetição;
 2. o teste entra e falha (duas cobranças);
 3. a correção entra e o mesmo teste passa;
-4. os casos de chave reutilizada com outro valor e de requisições simultâneas completam a proteção.
+4. os casos de chave reutilizada com outro valor e de uma segunda requisição que chega no meio da primeira completam a proteção.
 
 ## A correção
 
@@ -35,11 +35,12 @@ python -m pytest
 ## Que evidência isso gera
 
 - Repetir a mesma requisição depois de uma resposta perdida não cria uma segunda cobrança.
-- Requisições simultâneas com a mesma chave, no mesmo processo, criam uma única cobrança.
+- Uma segunda requisição com a mesma chave, disparada no exato intervalo entre a primeira consultar a chave e registrar a cobrança, não cria outra cobrança. O teste força esse intervalo de propósito e falha se a trava for removida.
 - Reutilizar a chave com outro valor é recusado.
 
 ## O que isso não prova
 
+- O teste cobre uma intercalação específica, em um único processo. Não é prova geral de ausência de condição de corrida.
 - O armazenamento é em memória: não cobre vários processos, reinício do serviço nem expiração de chaves. Em produção, a chave precisa de armazenamento compartilhado com restrição de unicidade.
 - Não cobre o cliente gerar uma chave nova a cada tentativa, que anula a proteção.
 - Não substitui monitorar cobranças repetidas para a mesma operação.
