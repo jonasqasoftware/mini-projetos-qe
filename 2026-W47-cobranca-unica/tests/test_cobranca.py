@@ -1,5 +1,6 @@
-import pytest
+from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 from cobranca import ServicoDeCobranca, cobrar_com_repeticao
 
 
@@ -22,3 +23,10 @@ def test_mesma_chave_com_outro_valor_e_recusada():
     servico.cobrar("a", "pedido-1", 100)
     with pytest.raises(ValueError):
         servico.cobrar("a", "pedido-1", 200)
+
+
+def test_requisicoes_simultaneas_com_mesma_chave():
+    servico = ServicoDeCobranca()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda _: servico.cobrar("a", "pedido-1", 100), range(50)))
+    assert len(servico.cobrancas) == 1
