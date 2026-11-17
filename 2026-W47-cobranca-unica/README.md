@@ -35,7 +35,7 @@ python -m pytest
 ## Que evidência isso gera
 
 - Repetir a mesma requisição depois de uma resposta perdida não cria uma segunda cobrança.
-- Uma segunda requisição com a mesma chave, disparada no exato intervalo entre a primeira consultar a chave e registrar a cobrança, não cria outra cobrança. O teste força esse intervalo de propósito e falha se a trava for removida.
+- Uma segunda requisição com a mesma chave, disparada no exato intervalo entre a primeira consultar a chave e registrar a cobrança, não cria outra cobrança. O teste força esse intervalo de propósito: a primeira requisição só continua depois de confirmar que a segunda chegou à trava ou já terminou, sem depender de tempo. Sem a trava, ele falha.
 - Reutilizar a chave com outro valor é recusado.
 
 ## O que isso não prova
