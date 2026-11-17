@@ -32,6 +32,9 @@ class ServicoDeCobranca:
         if valor_centavos <= 0:
             raise ValueError("valor deve ser positivo")
         with self._trava:
+            existente = self._por_chave.get(chave)
+            if existente is not None:
+                return existente
             nova = Cobranca(len(self.cobrancas) + 1, pedido, valor_centavos)
             self.cobrancas.append(nova)
             self._por_chave[chave] = nova
