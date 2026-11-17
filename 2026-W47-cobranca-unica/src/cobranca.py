@@ -6,6 +6,7 @@ O serviço precisa registrar no máximo uma cobrança por chave.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from threading import Lock
 
@@ -27,6 +28,8 @@ class ServicoDeCobranca:
     _por_chave: dict[str, Cobranca] = field(default_factory=dict)
     _trava: Lock = field(default_factory=Lock)
     perder_proxima_resposta: bool = False
+    # Ponto de observação para testes: chamado entre consultar a chave e registrar a cobrança.
+    ao_consultar_chave: Callable[[], None] | None = None
 
     def cobrar(self, chave: str, pedido: str, valor_centavos: int) -> Cobranca:
         if valor_centavos <= 0:
@@ -37,6 +40,8 @@ class ServicoDeCobranca:
                 if (existente.pedido, existente.valor_centavos) != (pedido, valor_centavos):
                     raise ValueError("chave reutilizada com outro conteúdo")
                 return existente
+            if self.ao_consultar_chave is not None:
+                self.ao_consultar_chave()
             nova = Cobranca(len(self.cobrancas) + 1, pedido, valor_centavos)
             self.cobrancas.append(nova)
             self._por_chave[chave] = nova
