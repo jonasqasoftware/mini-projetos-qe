@@ -34,6 +34,8 @@ class ServicoDeCobranca:
         with self._trava:
             existente = self._por_chave.get(chave)
             if existente is not None:
+                if (existente.pedido, existente.valor_centavos) != (pedido, valor_centavos):
+                    raise ValueError("chave reutilizada com outro conteúdo")
                 return existente
             nova = Cobranca(len(self.cobrancas) + 1, pedido, valor_centavos)
             self.cobrancas.append(nova)
