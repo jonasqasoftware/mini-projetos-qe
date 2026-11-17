@@ -25,29 +25,50 @@ def test_mesma_chave_com_outro_valor_e_recusada():
         servico.cobrar("a", "pedido-1", 200)
 
 
+class TravaObservada:
+    """Trava que avisa quando outra thread (que não a primeira) tenta entrar nela."""
+
+    def __init__(self, ao_tentar_entrar):
+        self._trava = threading.Lock()
+        self._ao_tentar_entrar = ao_tentar_entrar
+        self._primeira = threading.current_thread()
+
+    def __enter__(self):
+        if threading.current_thread() is not self._primeira:
+            self._ao_tentar_entrar()
+        self._trava.acquire()
+        return self
+
+    def __exit__(self, *exc):
+        self._trava.release()
+        return False
+
+
 def test_segunda_requisicao_entre_consulta_e_registro_nao_duplica():
     """Intercala de forma controlada: a segunda requisição começa quando a primeira
-    já consultou a chave e ainda não registrou a cobrança. Sem exclusão mútua,
-    a segunda termina nessa janela e as duas registram uma cobrança."""
+    já consultou a chave e ainda não registrou a cobrança. A primeira só continua
+    depois de um destes fatos: a segunda chegou à trava (e vai esperar) ou a segunda
+    já terminou (não havia exclusão mútua). No segundo caso, surgem duas cobranças."""
     servico = ServicoDeCobranca()
-    segunda_terminou = threading.Event()
+    segunda_chegou = threading.Event()
+    servico._trava = TravaObservada(segunda_chegou.set)
     threads: list[threading.Thread] = []
 
     def segunda_requisicao():
         servico.cobrar("a", "pedido-1", 100)
-        segunda_terminou.set()
+        segunda_chegou.set()
 
     def intercalar():
         servico.ao_consultar_chave = None
         t = threading.Thread(target=segunda_requisicao)
         threads.append(t)
         t.start()
-        # Sem trava, a segunda termina aqui. Com trava, ela espera a primeira.
-        segunda_terminou.wait(timeout=1)
+        # O prazo só protege contra travamento; a ordem vem do evento.
+        assert segunda_chegou.wait(timeout=10), "a segunda requisição não avançou"
 
     servico.ao_consultar_chave = intercalar
     servico.cobrar("a", "pedido-1", 100)
-    threads[0].join(timeout=5)
+    threads[0].join(timeout=10)
 
-    assert segunda_terminou.is_set()
+    assert not threads[0].is_alive()
     assert len(servico.cobrancas) == 1
